@@ -1,0 +1,36 @@
+plugins {
+    id 'fabric-loom' version '1.7-SNAPSHOT'
+}
+
+base { archivesName = 'lyricsworld-fabric-1.20.1' }
+apply from: '../common.gradle'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:1.20.1"
+    mappings loom.officialMojangMappings()
+    modImplementation "net.fabricmc:fabric-loader:0.15.11"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:0.92.2+1.20.1"
+}
+
+// rendering code shared with the Forge 1.20.1 module (both use Mojang mappings)
+sourceSets.main.java.srcDir '../common-1.20.1/src/main/java'
+
+processResources {
+    inputs.property 'version', project.version
+    filesMatching('fabric.mod.json') {
+        expand 'version': project.version
+    }
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 17
+}

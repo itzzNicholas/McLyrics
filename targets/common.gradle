@@ -1,0 +1,47 @@
+// Applied by every target build *after* its loader plugin. Shades the loader-independent `core`
+// module (code + emoji data + atlas) into the mod jar and stamps the version.
+//
+// Expects settings.gradle to have included core:
+//     include ':core'
+//     project(':core').projectDir = file('../../core')
+
+ext.lyricsVersion = (project.findProperty('modVersion') ?: '0.1.0').toString()
+version = ext.lyricsVersion
+
+def coreProject = project(':core')
+
+dependencies {
+    implementation coreProject
+}
+
+// assets/lyricsworld/version.txt is read by dev.lyricsworld.util.Version
+def versionRes = layout.buildDirectory.dir('generated/resources/version')
+tasks.register('genVersionRes') {
+    inputs.property('v', ext.lyricsVersion)
+    outputs.dir(versionRes)
+    doLast {
+        def f = versionRes.get().file('assets/lyricsworld/version.txt').asFile
+        f.parentFile.mkdirs()
+        f.text = ext.lyricsVersion
+    }
+}
+sourceSets.main.resources.srcDir(versionRes)
+tasks.named('processResources') { dependsOn 'genVersionRes' }
+
+tasks.named('jar') {
+    from(coreProject.sourceSets.main.output)
+    from(rootProject.file('../../LICENSE')) { rename { 'LICENSE_LyricsWorld' } }
+    from(rootProject.file('../../docs/THIRD_PARTY.md')) { rename { 'THIRD_PARTY_LyricsWorld.md' } }
+    manifest {
+        attributes(
+            'Implementation-Title': 'LyricsWorld',
+            'Implementation-Version': ext.lyricsVersion,
+            'Specification-Title': 'LyricsWorld',
+            'Specification-Version': ext.lyricsVersion
+        )
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}

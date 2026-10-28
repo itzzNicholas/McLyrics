@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "lyricsworld",
+  "version": "${version}",
+  "name": "LyricsWorld",
+  "description": "Shows the lyrics of the song you are playing, word by word, floating in the world - with context-aware emoji. Client-side only.",
+  "authors": ["itzznicholas"],
+  "contact": {
+    "homepage": "https://github.com/itzznicholas/mclyrics",
+    "issues": "https://github.com/itzznicholas/mclyrics/issues",
+    "sources": "https://github.com/itzznicholas/mclyrics"
+  },
+  "license": "AGPL-3.0-or-later",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["dev.lyricsworld.fabric.LyricsWorldFabric"]
+  },
+  "depends": {
+    "fabricloader": ">=0.14.21",
+    "minecraft": "1.20.1",
+    "java": ">=17",
+    "fabric-api": "*"
+  }
+}
