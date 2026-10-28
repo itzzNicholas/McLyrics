@@ -5,8 +5,8 @@
 //     include ':core'
 //     project(':core').projectDir = file('../../core')
 
-ext.lyricsVersion = (project.findProperty('modVersion') ?: '0.1.0').toString()
-version = ext.lyricsVersion
+def lyricsVersion = (project.findProperty('modVersion') ?: '0.1.0').toString()
+version = lyricsVersion
 
 def coreProject = project(':core')
 
@@ -17,12 +17,12 @@ dependencies {
 // assets/lyricsworld/version.txt is read by dev.lyricsworld.util.Version
 def versionRes = layout.buildDirectory.dir('generated/resources/version')
 tasks.register('genVersionRes') {
-    inputs.property('v', ext.lyricsVersion)
+    inputs.property('v', lyricsVersion)
     outputs.dir(versionRes)
     doLast {
         def f = versionRes.get().file('assets/lyricsworld/version.txt').asFile
         f.parentFile.mkdirs()
-        f.text = ext.lyricsVersion
+        f.text = lyricsVersion
     }
 }
 sourceSets.main.resources.srcDir(versionRes)
@@ -35,9 +35,9 @@ tasks.named('jar') {
     manifest {
         attributes(
             'Implementation-Title': 'LyricsWorld',
-            'Implementation-Version': ext.lyricsVersion,
+            'Implementation-Version': lyricsVersion,
             'Specification-Title': 'LyricsWorld',
-            'Specification-Version': ext.lyricsVersion
+            'Specification-Version': lyricsVersion
         )
     }
 }
