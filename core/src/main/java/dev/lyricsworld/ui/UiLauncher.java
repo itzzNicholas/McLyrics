@@ -114,16 +114,38 @@ public final class UiLauncher {
             Path jar = dirs.cacheDir.resolve("window.jar");
             Files.createDirectories(jar.getParent());
             try (JarOutputStream out = new JarOutputStream(Files.newOutputStream(jar))) {
-                copyClass(out, "dev/lyricsworld/ui/UiMain.class");
-                for (int i = 1; i < 200; i++) {
-                    if (!copyClass(out, "dev/lyricsworld/ui/UiMain$" + i + ".class")) break;
-                }
-                for (String n : UiMain.NESTED) copyClass(out, "dev/lyricsworld/ui/UiMain$" + n + ".class");
+                for (String name : windowClassNames(UiLauncher.class.getClassLoader())) copyClass(out, name);
             }
             return jar.toAbsolutePath().toString();
         } catch (IOException | RuntimeException e) {
             Log.warn("Cannot extract window classes", e);
             return null;
+        }
+    }
+
+    /**
+     * Every class file the window needs: UiMain, its named nested classes, and all anonymous classes at any
+     * depth (UiMain$24, UiMain$24$1, ...). Anonymous classes are numbered consecutively, so probing until the
+     * first gap finds them all.
+     */
+    static List<String> windowClassNames(ClassLoader cl) {
+        List<String> out = new ArrayList<String>();
+        collect(cl, "dev/lyricsworld/ui/UiMain", out);
+        return out;
+    }
+
+    private static void collect(ClassLoader cl, String base, List<String> out) {
+        if (cl.getResource(base + ".class") == null) return;
+        out.add(base + ".class");
+        List<String> children = new ArrayList<String>();
+        for (String n : UiMain.NESTED) children.add(base + "$" + n);
+        for (int i = 1; i < 500; i++) {
+            String c = base + "$" + i;
+            if (cl.getResource(c + ".class") == null) break;
+            children.add(c);
+        }
+        for (String c : children) {
+            if (!out.contains(c + ".class")) collect(cl, c, out);
         }
     }
 
