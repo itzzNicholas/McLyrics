@@ -9,6 +9,8 @@ public final class PlayerView {
     /** Camera (eye) position and yaw in the same convention. */
     public double camX, camY, camZ;
     public float camYawDeg;
+    /** Camera pitch in degrees, Minecraft convention (positive = looking down). */
+    public float camPitchDeg;
     public boolean moving;
     public boolean fighting;
 }

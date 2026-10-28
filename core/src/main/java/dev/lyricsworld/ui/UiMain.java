@@ -426,20 +426,25 @@ public final class UiMain {
 
     private JComponent displayTab() {
         Form f = new Form();
-        f.add("Position", combo("position", new String[]{"BEHIND", "ABOVE", "FRONT"}));
+        f.add("Layout", combo("position", new String[]{"VIEW", "BEHIND", "ABOVE", "FRONT"}));
+        f.add(null, new JLabel("<html><b>VIEW</b>: in front of you, centre-low, lines scattered left/right (default). "
+                + "The others are anchored to your body.</html>"));
+        f.add("Font", combo("fontMode", new String[]{"ROCK", "GAME"}));
         f.add("Distance (blocks)", slider("distance", 10, 120, 10, ""));
-        f.add("Height (blocks)", slider("height", -10, 80, 10, ""));
+        f.add("Spread left/right", slider("spread", 0, 30, 10, ""));
+        f.add("Line tilt (deg)", slider("tilt", 0, 15, 1, ""));
+        f.add("Height / vertical offset", slider("height", -40, 80, 10, ""));
         f.add("Scale", slider("scale", 25, 400, 100, "x"));
         f.add("Opacity", slider("opacity", 5, 100, 100, ""));
         f.add("Visible rows", slider("rows", 1, 7, 1, ""));
         f.add("Arc spread (deg/row)", slider("arcSpread", 0, 45, 1, ""));
-        f.add("Font style", combo("fontStyle", new String[]{"NORMAL", "BOLD", "ITALIC", "BOLD_ITALIC"}));
+        f.add("Game-font style", combo("fontStyle", new String[]{"NORMAL", "BOLD", "ITALIC", "BOLD_ITALIC"}));
         f.add("Current word colour", colorButton("colorCurrent"));
         f.add("Sung colour", colorButton("colorSung"));
         f.add("Upcoming colour", colorButton("colorUpcoming"));
         f.add(null, check("shadow", "Text shadow"));
         f.add(null, check("outline", "Text outline (more readable, slightly more draw calls)"));
-        f.add(null, check("seeThroughBlocks", "Draw through blocks"));
+        f.add(null, check("seeThroughBlocks", "Draw through blocks (off = blends with players, mobs and blocks)"));
         f.add(null, check("fadeWhenMoving", "Fade out while moving / fighting"));
         f.add("Opacity while moving", slider("movingOpacity", 5, 100, 100, ""));
         return f.done();
@@ -848,7 +853,7 @@ public final class UiMain {
                 + "\"fetchLyricsOnline\":true,\"spotifyClientId\":\"\",\"spotifyRedirectPort\":8898,\"position\":\"BEHIND\","
                 + "\"distance\":3.0,\"height\":2.7,\"scale\":1.0,\"opacity\":0.95,\"rows\":3,\"arcSpread\":12.0,"
                 + "\"fontStyle\":\"NORMAL\",\"colorCurrent\":-8090,\"colorSung\":-5200000,\"colorUpcoming\":-1,"
-                + "\"shadow\":true,\"outline\":true,\"seeThroughBlocks\":true,\"fadeWhenMoving\":true,\"movingOpacity\":0.3,"
+                + "\"shadow\":true,\"outline\":true,\"seeThroughBlocks\":false,\"fadeWhenMoving\":false,\"movingOpacity\":0.3,"
                 + "\"emojiEnabled\":true,\"emojiIntensity\":60,\"emojiMainOnly\":false,\"emojiVariety\":70,"
                 + "\"emojiCooldownMs\":700,\"emojiSize\":1.0,\"disabledEmojiCategories\":[\"drinks\"]},"
                 + "\"categories\":[\"love\",\"breakup\",\"sadness\",\"drinks\",\"fire\"],"

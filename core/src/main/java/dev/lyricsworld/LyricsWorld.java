@@ -12,6 +12,7 @@ import dev.lyricsworld.media.SpotifyAuth;
 import dev.lyricsworld.media.SpotifyTokenStore;
 import dev.lyricsworld.scene.GameAccess;
 import dev.lyricsworld.scene.LyricsRenderer;
+import dev.lyricsworld.scene.GlyphAtlas;
 import dev.lyricsworld.scene.PlayerView;
 import dev.lyricsworld.scene.Scene;
 import dev.lyricsworld.scene.SceneBuilder;
@@ -64,7 +65,7 @@ public final class LyricsWorld {
         this.emojiEngine = EmojiEngine.loadDefault(atlas, dirs.root.resolve("emoji"));
         this.lyrics = new LyricsManager(dirs, settings, emojiEngine);
         this.media = new MediaManager(settings, spotifyAuth, clock);
-        this.sceneBuilder = new SceneBuilder(renderer, atlas);
+        this.sceneBuilder = new SceneBuilder(renderer, atlas, GlyphAtlas.loadDefault());
     }
 
     /**

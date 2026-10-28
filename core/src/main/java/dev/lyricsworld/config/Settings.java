@@ -23,10 +23,20 @@ public final class Settings {
     public boolean fetchLyricsOnline = true;
 
     // ---- world rendering ----
-    /** BEHIND | ABOVE | FRONT */
-    public String position = "BEHIND";
+    /** Bumped when the default layout changes; older files get the new layout defaults once. */
+    public int layoutVersion = LAYOUT_VERSION;
+    public static final int LAYOUT_VERSION = 2;
+    /** VIEW (in front of you, centre-low, scattered left/right) | BEHIND | ABOVE | FRONT */
+    public String position = "VIEW";
+    /** ROCK (bundled Rock Salt, shader-friendly quads) | GAME (Minecraft's own font) */
+    public String fontMode = "ROCK";
     public float distance = 3.0f;
-    public float height = 2.7f;
+    /** VIEW: vertical offset from screen centre (negative = lower); other modes: height above the feet. */
+    public float height = -0.7f;
+    /** VIEW: how far lines/emoji scatter to the left and right, in blocks (at distance 3). */
+    public float spread = 0.9f;
+    /** VIEW: tilt of each line in degrees, alternating left/right. */
+    public float tilt = 4f;
     public float scale = 1.0f;
     public float opacity = 0.95f;
     public int rows = 3;
@@ -39,8 +49,8 @@ public final class Settings {
     public int colorUpcoming = 0xFFFFFFFF;
     public boolean shadow = true;
     public boolean outline = true;
-    public boolean seeThroughBlocks = true;
-    public boolean fadeWhenMoving = true;
+    public boolean seeThroughBlocks = false;
+    public boolean fadeWhenMoving = false;
     public float movingOpacity = 0.30f;
 
     // ---- emoji ----
@@ -54,16 +64,38 @@ public final class Settings {
     public float emojiSize = 1.0f;
     public List<String> disabledEmojiCategories = new ArrayList<String>();
 
+    /** Applies the current layout defaults to a settings file written by an older version (done once, on load). */
+    public Settings migrateLayoutToDefaults() {
+        Settings d = new Settings();
+        position = d.position;
+        fontMode = d.fontMode;
+        distance = d.distance;
+        height = d.height;
+        spread = d.spread;
+        tilt = d.tilt;
+        scale = d.scale;
+        rows = d.rows;
+        outline = d.outline;
+        shadow = d.shadow;
+        seeThroughBlocks = d.seeThroughBlocks;
+        fadeWhenMoving = d.fadeWhenMoving;
+        layoutVersion = LAYOUT_VERSION;
+        return this;
+    }
+
     public Settings sanitize() {
         source = oneOf(source, "AUTO", "AUTO", "SPOTIFY", "APPLE_MUSIC", "SYSTEM");
-        position = oneOf(position, "BEHIND", "BEHIND", "ABOVE", "FRONT");
+        position = oneOf(position, "VIEW", "VIEW", "BEHIND", "ABOVE", "FRONT");
+        fontMode = oneOf(fontMode, "ROCK", "ROCK", "GAME");
         fontStyle = oneOf(fontStyle, "NORMAL", "NORMAL", "BOLD", "ITALIC", "BOLD_ITALIC");
         if (spotifyClientId == null) spotifyClientId = "";
         spotifyClientId = spotifyClientId.trim();
         spotifyRedirectPort = clamp(spotifyRedirectPort, 1024, 65535);
         syncOffsetMs = clamp(syncOffsetMs, -5000, 5000);
         distance = clamp(distance, 1f, 12f);
-        height = clamp(height, -1f, 8f);
+        height = clamp(height, -4f, 8f);
+        spread = clamp(spread, 0f, 3f);
+        tilt = clamp(tilt, 0f, 15f);
         scale = clamp(scale, 0.25f, 4f);
         opacity = clamp(opacity, 0.05f, 1f);
         rows = clamp(rows, 1, 7);

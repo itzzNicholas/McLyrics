@@ -15,6 +15,7 @@ import static org.junit.Assert.*;
 public class SceneBuilderTest {
     static final long MS = 1_000_000L;
     final EmojiAtlas atlas = EmojiAtlas.loadDefault();
+    final GlyphAtlas glyphs = GlyphAtlas.loadDefault();
     final EmojiEngine engine = EmojiEngine.loadDefault(atlas, null);
     final LyricsRenderer metrics = new LyricsRenderer() {
         @Override public int textWidth(String s) { return s.replace("\u00a7l", "").length() * 6; }
@@ -28,8 +29,12 @@ public class SceneBuilderTest {
 
     @Before
     public void setUp() {
-        b = new SceneBuilder(metrics, atlas);
+        b = new SceneBuilder(metrics, atlas, glyphs);
         s = new Settings().sanitize();
+        // most tests below exercise the classic player-relative layout with the game font
+        s.position = "BEHIND";
+        s.fontMode = "GAME";
+        s.fadeWhenMoving = true;
         v = new PlayerView();
         v.x = 10;
         v.y = 64;
@@ -263,8 +268,13 @@ public class SceneBuilderTest {
         com.sun.management.ThreadMXBean mx = (com.sun.management.ThreadMXBean) java.lang.management.ManagementFactory.getThreadMXBean();
         if (!mx.isThreadAllocatedMemorySupported()) return;
         mx.setThreadAllocatedMemoryEnabled(true);
-        for (String style : new String[]{"NORMAL", "BOLD_ITALIC"}) {
-            s.fontStyle = style;
+        for (String style : new String[]{"NORMAL", "BOLD_ITALIC", "ROCK-VIEW"}) {
+            if (style.equals("ROCK-VIEW")) {
+                s.fontMode = "ROCK";
+                s.position = "VIEW";
+            } else {
+                s.fontStyle = style;
+            }
             s.emojiEnabled = true;
             s.emojiIntensity = 100;
             s.rows = 5;
@@ -277,5 +287,153 @@ public class SceneBuilderTest {
             // a handful of bytes per frame at most (boxing in the JDK, etc.), certainly not a per-word garbage stream
             assertTrue(style + ": allocated " + used + " bytes in 600 frames", used < 600 * 64);
         }
+    }
+
+    // ---- new default layout: in front of the view, centre-low, scattered left/right, Rock font ----
+
+    private void viewMode() {
+        s.position = "VIEW";
+        s.fontMode = "ROCK";
+        s.fadeWhenMoving = false;
+        s.rows = 3;
+    }
+
+    private double lateralOf(Scene.LineItem it) {
+        double rightX = -Math.cos(Math.toRadians(v.camYawDeg)), rightZ = -Math.sin(Math.toRadians(v.camYawDeg));
+        return (it.x - v.camX) * rightX + (it.z - v.camZ) * rightZ;
+    }
+
+    @Test
+    public void viewModeIsInFrontOfTheCameraAndBelowCentre() {
+        viewMode();
+        v.camX = v.x;
+        v.camY = v.y + 1.62;
+        v.camZ = v.z;
+        v.camYawDeg = 0; // facing +Z
+        v.camPitchDeg = 0;
+        Scene sc = frame(15_000);
+        assertTrue(sc.customFont);
+        assertTrue(sc.lineCount >= 2);
+        for (int i = 0; i < sc.lineCount; i++) {
+            Scene.LineItem it = sc.lines[i];
+            assertEquals("distance in front", s.distance, it.z - v.camZ, 0.01);
+            assertTrue("below the view centre", it.y < v.camY);
+        }
+        assertFalse("depth-tested by default (blends with entities)", sc.seeThrough);
+    }
+
+    @Test
+    public void viewModeFollowsWhereYouLook() {
+        viewMode();
+        v.camX = 0;
+        v.camY = 65.62;
+        v.camZ = 0;
+        v.camYawDeg = 90; // facing -X
+        Scene.LineItem west = frame(15_000).lines[0];
+        assertTrue(west.x < -2.5);
+        v.camYawDeg = 0;
+        v.camPitchDeg = -60; // looking up
+        Scene.LineItem up = frame(15_100).lines[0];
+        assertTrue("looking up lifts the text", up.y > v.camY);
+    }
+
+    @Test
+    public void viewModeScattersLinesLeftAndRight() {
+        viewMode();
+        s.rows = 5;
+        v.camYawDeg = 0;
+        Scene sc = frame(15_000);
+        int left = 0, right = 0;
+        for (int i = 0; i < sc.lineCount; i++) {
+            double lat = lateralOf(sc.lines[i]);
+            if (lat < -0.1) left++;
+            if (lat > 0.1) right++;
+        }
+        assertTrue("left=" + left + " right=" + right, left >= 1 && right >= 1);
+        // lines are tilted, alternating
+        boolean tilted = false;
+        for (int i = 0; i < sc.lineCount; i++) tilted |= Math.abs(sc.lines[i].rollDeg) > 0.5f;
+        assertTrue(tilted);
+    }
+
+    @Test
+    public void emojiScatterToBothSidesInViewMode() {
+        viewMode();
+        StringBuilder lrc = new StringBuilder();
+        for (int i = 0; i < 30; i++) lrc.append(String.format("[00:%02d.00]my love and my heart\n", i + 1));
+        Lyrics l = LrcParser.parse(lrc + "[01:00.00]end", "t", true);
+        snap = new LyricsSnapshot(l, engine.buildTimeline(l).toArray(new EmojiEvent[0]));
+        s.emojiIntensity = 100;
+        s.emojiCooldownMs = 0;
+        int left = 0, right = 0;
+        for (long t = 500; t < 30_000; t += 40) {
+            Scene sc = frame(t);
+            for (int i = 0; i < sc.emojiCount; i++) {
+                double rightX = -1, rightZ = 0; // camYaw 0
+                double lat = (sc.emoji[i].x - v.camX) * rightX + (sc.emoji[i].z - v.camZ) * rightZ;
+                if (lat < -0.2) left++;
+                if (lat > 0.2) right++;
+            }
+        }
+        assertTrue("left=" + left + " right=" + right, left > 5 && right > 5);
+    }
+
+    @Test
+    public void rockFontGlyphsAreEmittedAsOutlineAndFillQuads() {
+        assertTrue(glyphs.isLoaded());
+        assertTrue(glyphs.width("Hello") > glyphs.width("He"));
+        for (char c : "àèéìòùÀÈÉ’!?".toCharArray()) assertTrue("glyph for " + c, glyphs.advance(c) > 0);
+        Scene.LineItem it = new Scene.LineItem();
+        it.wordCount = 1;
+        it.words[0] = "Hi";
+        it.wordX[0] = -20;
+        it.wordColor[0] = 0xFFFFE066;
+        it.wordScale[0] = 1f;
+        final java.util.List<float[]> fill = new java.util.ArrayList<float[]>();
+        final java.util.List<float[]> outline = new java.util.ArrayList<float[]>();
+        final java.util.List<Integer> colors = new java.util.ArrayList<Integer>();
+        glyphs.emitLine(it, false, 0, new GlyphAtlas.QuadSink() {
+            @Override public void quad(float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3,
+                                       float u0, float v0, float u1, float v1, int argb) {
+                fill.add(new float[]{x0, y0, x2, y2, u0, v0});
+                colors.add(argb);
+            }
+        });
+        glyphs.emitLine(it, true, 0x101010, new GlyphAtlas.QuadSink() {
+            @Override public void quad(float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3,
+                                       float u0, float v0, float u1, float v1, int argb) {
+                outline.add(new float[]{x0, y0, x2, y2, u0, v0});
+                colors.add(argb);
+            }
+        });
+        assertEquals(2, fill.size());
+        assertEquals(2, outline.size());
+        assertNotEquals("outline samples another part of the atlas", fill.get(0)[5], outline.get(0)[5], 0f);
+        assertEquals(0xFFFFE066, (int) colors.get(0));
+        assertEquals(0xFF101010, (int) colors.get(2));
+        assertTrue(fill.get(0)[2] > fill.get(0)[0] && fill.get(0)[3] > fill.get(0)[1]);
+
+        // roll rotates the quads
+        it.rollDeg = 20;
+        final float[] rolled = new float[1];
+        glyphs.emitLine(it, false, 0, new GlyphAtlas.QuadSink() {
+            @Override public void quad(float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3,
+                                       float u0, float v0, float u1, float v1, int argb) {
+                if (rolled[0] == 0) rolled[0] = y0;
+            }
+        });
+        assertNotEquals(fill.get(0)[1], rolled[0], 0.01f);
+    }
+
+    @Test
+    public void rockModeKeepsLinesInsideTheScreenWidth() {
+        viewMode();
+        s.rows = 1;
+        StringBuilder sb = new StringBuilder("[00:01.00]");
+        for (int i = 0; i < 40; i++) sb.append("wonderful ");
+        Lyrics l = LrcParser.parse(sb + "\n[00:20.00]x", "t", true);
+        snap = new LyricsSnapshot(l, new EmojiEvent[0]);
+        Scene.LineItem it = frame(2_000).lines[0];
+        assertTrue(it.scale * it.widthPx <= s.distance * 1.31f);
     }
 }

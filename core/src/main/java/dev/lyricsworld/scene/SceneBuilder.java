@@ -16,6 +16,8 @@ import java.util.Random;
 public final class SceneBuilder {
     private static final char SECTION = '§';
     private static final float WORLD_PER_PIXEL = 0.025f;
+    /** The Rock Salt atlas is drawn at 42 px per em: this keeps its on-screen size comparable. */
+    private static final float GLYPH_WORLD_PER_PIXEL = 0.0034f;
     /** Widest a line may get in blocks before it is shrunk to fit. */
     private static final float MAX_LINE_BLOCKS = 7f;
     private static final float EMOJI_LIFE_SECONDS = 2.6f;
@@ -33,6 +35,7 @@ public final class SceneBuilder {
 
     private final LyricsRenderer metrics;
     private final EmojiAtlas atlas;
+    private final GlyphAtlas glyphAtlas;
     private final Scene scene = new Scene();
     private final Layout[] cache = new Layout[LAYOUT_CACHE];
     private final EmojiParticles particles = new EmojiParticles();
@@ -47,9 +50,17 @@ public final class SceneBuilder {
     private int lastEmojiIdx = -1;
     private int cacheCursor;
 
-    public SceneBuilder(LyricsRenderer metrics, EmojiAtlas atlas) {
+    // per-frame derived state
+    private boolean useGlyphs;
+    private boolean viewMode;
+    private float distScale = 1f;
+    private double camX, camY, camZ;
+    private double fwdX, fwdY, fwdZ, rightX, rightZ, upX, upY, upZ;
+
+    public SceneBuilder(LyricsRenderer metrics, EmojiAtlas atlas, GlyphAtlas glyphAtlas) {
         this.metrics = metrics;
         this.atlas = atlas;
+        this.glyphAtlas = glyphAtlas;
         for (int i = 0; i < cache.length; i++) cache[i] = new Layout();
     }
 
@@ -77,11 +88,17 @@ public final class SceneBuilder {
         scene.shadow = s.shadow;
         scene.outline = s.outline;
         scene.seeThrough = s.seeThroughBlocks;
+        useGlyphs = "ROCK".equals(s.fontMode) && glyphAtlas != null && glyphAtlas.isLoaded();
+        scene.customFont = useGlyphs;
+        scene.glyphs = useGlyphs ? glyphAtlas : null;
+        viewMode = "VIEW".equals(s.position);
+        distScale = s.distance / 3f;
+        if (viewMode) computeViewBasis(v);
 
         if (snap != lastSnapshot) particles.clear();
         float baseYaw = baseYaw(s, v);
-        float ws = WORLD_PER_PIXEL * s.scale;
-        float rowSpacing = metrics.lineHeight() * ws * 1.35f;
+        float ws = (useGlyphs ? GLYPH_WORLD_PER_PIXEL * distScale : WORLD_PER_PIXEL) * s.scale;
+        float rowSpacing = lineHeight() * ws * 1.3f;
 
         int current = -1;
         if (snap != null && snap.lyrics.hasText()) {
@@ -95,6 +112,31 @@ public final class SceneBuilder {
     }
 
     // ------------------------------------------------------------------ text lines
+
+    private float maxLineBlocks() { return viewMode ? Math.max(1.5f, distScale * 3.9f) : MAX_LINE_BLOCKS; }
+
+    private void computeViewBasis(PlayerView v) {
+        double yaw = Math.toRadians(v.camYawDeg), pitch = Math.toRadians(v.camPitchDeg);
+        double cp = Math.cos(pitch);
+        fwdX = -Math.sin(yaw) * cp;
+        fwdY = -Math.sin(pitch);
+        fwdZ = Math.cos(yaw) * cp;
+        rightX = -Math.cos(yaw);
+        rightZ = -Math.sin(yaw);
+        // up = right x forward
+        upX = -rightZ * fwdY;
+        upY = rightZ * fwdX - rightX * fwdZ;
+        upZ = rightX * fwdY;
+        camX = v.camX;
+        camY = v.camY;
+        camZ = v.camZ;
+    }
+
+    /** Which side of the screen a line sits on: alternates left/right, with a stable per-line jitter. */
+    private static float sideOf(int lineIndex) {
+        float mag = 0.55f + 0.45f * (((lineIndex * 2654435761L) >>> 8 & 255) / 255f);
+        return ((lineIndex & 1) == 0 ? -1f : 1f) * mag;
+    }
 
     private void buildLines(PlayerView v, Settings s, LyricsSnapshot snap, int current, long posMs,
                             float baseYaw, float ws, float rowSpacing) {
@@ -122,10 +164,10 @@ public final class SceneBuilder {
             float rowFade = (float) Math.pow(0.62, Math.abs(o));
             if (current < 0 && o < 0) continue;
             Scene.LineItem it = scene.lines[scene.lineCount];
-            float shrink = Math.min(1f, MAX_LINE_BLOCKS / Math.max(1f, lay.width * ws));
+            float shrink = Math.min(1f, maxLineBlocks() / Math.max(1f, lay.width * ws));
             it.scale = ws * shrink;
             it.widthPx = lay.width;
-            placeRow(it, v, s, baseYaw, o, rowSpacing);
+            placeRow(it, v, s, baseYaw, o, rowSpacing, li);
 
             boolean isCurrent = li == current;
             boolean isPast = current >= 0 && li < current;
@@ -182,7 +224,19 @@ public final class SceneBuilder {
         return Math.max(0f, out);
     }
 
-    private void placeRow(Scene.LineItem it, PlayerView v, Settings s, float baseYaw, int rowOffset, float rowSpacing) {
+    private void placeRow(Scene.LineItem it, PlayerView v, Settings s, float baseYaw, int rowOffset, float rowSpacing,
+                          int lineIndex) {
+        if (viewMode) {
+            float side = sideOf(lineIndex);
+            double lateral = side * s.spread * distScale;
+            double vert = s.height * distScale - rowOffset * rowSpacing;
+            it.x = camX + fwdX * s.distance + rightX * lateral + upX * vert;
+            it.y = camY + fwdY * s.distance + upY * vert;
+            it.z = camZ + fwdZ * s.distance + rightZ * lateral + upZ * vert;
+            it.rollDeg = -Math.signum(side) * s.tilt;
+            return;
+        }
+        it.rollDeg = 0f;
         double y = v.y + s.height - rowOffset * rowSpacing;
         if ("ABOVE".equals(s.position)) {
             it.x = v.x;
@@ -200,8 +254,12 @@ public final class SceneBuilder {
         return "FRONT".equals(s.position) ? v.yawDeg : v.yawDeg + 180f;
     }
 
+    private float textWidth(String text) { return useGlyphs ? glyphAtlas.width(text) : metrics.textWidth(text); }
+
+    private float lineHeight() { return useGlyphs ? glyphAtlas.lineHeight() : metrics.lineHeight(); }
+
     private Layout layoutFor(Lyrics.Line line, String fontStyle) {
-        String prefix = stylePrefix(fontStyle);
+        String prefix = useGlyphs ? "\u0000" : stylePrefix(fontStyle); // glyph layouts carry no style codes
         for (Layout l : cache) {
             if (l.line == line && l.stylePrefix.equals(prefix)) return l;
         }
@@ -209,15 +267,15 @@ public final class SceneBuilder {
         cacheCursor = (cacheCursor + 1) % cache.length;
         l.line = line;
         l.stylePrefix = prefix;
-        float spacing = metrics.textWidth(prefix + " ");
+        float spacing = textWidth(useGlyphs ? " " : prefix + " ");
         float x = 0;
         int count = 0;
         for (Lyrics.Word w : line.words) {
             if (count >= Scene.MAX_WORDS) break;
             String clean = w.text.replace(SECTION, ' ');
-            String styled = prefix + clean;
+            String styled = useGlyphs ? clean : prefix + clean;
             l.words[count] = styled;
-            l.w[count] = metrics.textWidth(styled);
+            l.w[count] = textWidth(styled);
             l.x[count] = x;
             x += l.w[count] + spacing;
             count++;
@@ -281,12 +339,13 @@ public final class SceneBuilder {
         int rowOffset = current < 0 ? 0 : Math.max(-3, Math.min(3, e.lineIndex - current));
         Lyrics.Line line = snap.lyrics.lines.get(e.lineIndex);
         Layout lay = layoutFor(line, s.fontStyle);
-        float shrink = Math.min(1f, MAX_LINE_BLOCKS / Math.max(1f, lay.width * ws));
+        float shrink = Math.min(1f, maxLineBlocks() / Math.max(1f, lay.width * ws));
         int wi = Math.min(e.wordIndex, Math.max(0, lay.count - 1));
         float centreX = lay.count == 0 ? 0 : lay.x[wi] + lay.w[wi] / 2f - lay.width / 2f;
-        float size = 0.55f * s.emojiSize * (0.7f + 0.6f * s.emojiIntensity / 100f) * (float) Math.sqrt(s.scale);
+        float size = 0.55f * s.emojiSize * (0.7f + 0.6f * s.emojiIntensity / 100f) * (float) Math.sqrt(s.scale) * distScale;
         float relAngle = "ABOVE".equals(s.position) ? 0f : rowOffset * s.arcSpread;
         float dist = "ABOVE".equals(s.position) ? 0f : s.distance;
+        float lineBaseHeight = viewMode ? s.height * distScale - rowOffset * rowSpacing : s.height - rowOffset * rowSpacing;
 
         int first = pickIndex(e.emoji.length, s.emojiVariety);
         boolean any = false;
@@ -294,9 +353,17 @@ public final class SceneBuilder {
             int idx = (first + k) % e.emoji.length;
             int cell = atlas.cellOf(e.emoji[idx]);
             if (cell < 0) continue;
-            float lateral = centreX * ws * shrink + (k - (count - 1) / 2f) * size * 1.05f + (rnd.nextFloat() - 0.5f) * 0.2f;
-            float height = s.height - rowOffset * rowSpacing + metrics.lineHeight() * ws * 1.1f + size * 0.6f
-                    + rnd.nextFloat() * 0.15f;
+            float lateral;
+            if (viewMode) {
+                // scatter to the left and right of the line, mostly on the opposite side of the screen
+                float lineSide = Math.signum(sideOf(e.lineIndex));
+                float emojiSide = rnd.nextFloat() < 0.7f ? -lineSide : lineSide;
+                lateral = emojiSide * (0.35f + rnd.nextFloat() * 1.1f) * s.spread * distScale
+                        + (k - (count - 1) / 2f) * size * 1.05f;
+            } else {
+                lateral = centreX * ws * shrink + (k - (count - 1) / 2f) * size * 1.05f + (rnd.nextFloat() - 0.5f) * 0.2f;
+            }
+            float height = lineBaseHeight + lineHeight() * ws * 1.1f + size * 0.6f + rnd.nextFloat() * 0.35f;
             any |= particles.spawn(nowNanos, EMOJI_LIFE_SECONDS, relAngle, dist, height, lateral,
                     size * (0.85f + rnd.nextFloat() * 0.3f), cell, rnd, limit);
             lastEmojiIdx = idx;
@@ -330,14 +397,22 @@ public final class SceneBuilder {
             float fade = remaining < EmojiParticles.FADE_SECONDS ? remaining / EmojiParticles.FADE_SECONDS : 1f;
             float alpha = fade * s.opacity * Math.max(moveFade, 0.5f);
             if (alpha <= 0.02f) continue;
-            double rad = Math.toRadians(baseYaw + p.relAngle[i]);
-            double bx = v.x - Math.sin(rad) * p.dist[i];
-            double bz = v.z + Math.cos(rad) * p.dist[i];
             float sway = (float) Math.sin(age * 3.0 + p.phase[i]) * 0.05f;
             Scene.EmojiItem it = scene.emoji[scene.emojiCount++];
-            it.x = bx + rx * (p.lateral[i] + sway);
-            it.z = bz + rz * (p.lateral[i] + sway);
-            it.y = v.y + p.height[i] + 0.3f * age;
+            if (viewMode) {
+                double lat = p.lateral[i] + sway;
+                double vert = p.height[i] + 0.3f * age;
+                it.x = camX + fwdX * p.dist[i] + rightX * lat + upX * vert;
+                it.y = camY + fwdY * p.dist[i] + upY * vert;
+                it.z = camZ + fwdZ * p.dist[i] + rightZ * lat + upZ * vert;
+            } else {
+                double rad = Math.toRadians(baseYaw + p.relAngle[i]);
+                double bx = v.x - Math.sin(rad) * p.dist[i];
+                double bz = v.z + Math.cos(rad) * p.dist[i];
+                it.x = bx + rx * (p.lateral[i] + sway);
+                it.z = bz + rz * (p.lateral[i] + sway);
+                it.y = v.y + p.height[i] + 0.3f * age;
+            }
             it.size = p.size[i] * pop;
             it.alpha = alpha;
             it.cell = p.cell[i];

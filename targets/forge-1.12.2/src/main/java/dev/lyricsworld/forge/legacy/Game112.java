@@ -22,6 +22,7 @@ public final class Game112 implements GameAccess {
         out.camY = rm.viewerPosY;
         out.camZ = rm.viewerPosZ;
         out.camYawDeg = rm.playerViewY;
+        out.camPitchDeg = rm.playerViewX;
         out.moving = p.motionX * p.motionX + p.motionZ * p.motionZ > 0.0009;
         out.fighting = p.isSwingInProgress || p.hurtTime > 0 || mc.gameSettings.keyBindAttack.isKeyDown();
         return true;

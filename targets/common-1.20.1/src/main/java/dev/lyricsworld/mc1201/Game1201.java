@@ -25,6 +25,7 @@ public final class Game1201 implements GameAccess {
         out.camY = cp.y;
         out.camZ = cp.z;
         out.camYawDeg = cam.getYRot();
+        out.camPitchDeg = cam.getXRot();
         out.moving = p.getDeltaMovement().horizontalDistanceSqr() > 0.0009;
         out.fighting = p.swinging || p.hurtTime > 0 || mc.options.keyAttack.isDown();
         return true;

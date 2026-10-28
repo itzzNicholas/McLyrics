@@ -23,6 +23,8 @@ public final class Scene {
         /** 1 = normal; the word being sung pops slightly larger. */
         public final float[] wordScale = new float[MAX_WORDS];
         public float widthPx;
+        /** Tilt of the whole line around its centre, degrees (applied by {@link GlyphAtlas}). */
+        public float rollDeg;
     }
 
     /** One emoji quad, centred on (x,y,z), always facing the camera. */
@@ -40,7 +42,10 @@ public final class Scene {
     public int emojiCount;
     public boolean shadow = true;
     public boolean outline = true;
-    public boolean seeThrough = true;
+    public boolean seeThrough = false;
+    /** True: draw lines as glyph quads from {@link GlyphAtlas}; false: with the game's font renderer. */
+    public boolean customFont;
+    public GlyphAtlas glyphs;
     /** Outline colour as ARGB with full alpha; the renderer scales alpha with the text alpha. */
     public int outlineRgb = 0x000000;
 

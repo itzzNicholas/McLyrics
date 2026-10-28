@@ -18,6 +18,13 @@ LyricsWorld itself is licensed under the **GNU Affero General Public License v3.
 CC-BY 4.0 material may be combined with AGPL-3.0 code as long as it stays clearly attributed and
 separable (it is, under `assets/`); the AGPL does not relicense the artwork.
 
+## Lyrics font - Rock Salt
+
+* **What:** `assets/lyricsworld/textures/font_atlas.png` + `assets/lyricsworld/font/glyphs.json` are glyph images generated from **Rock Salt**.
+* **Source:** Google Fonts / the `@fontsource/rock-salt` npm package. Copyright (c) 2010 by Font Diner, Inc DBA Sideshow.
+* **License:** **Apache License 2.0** (full text: `docs/fonts/LICENSE-RockSalt-Apache-2.0.txt`). The glyphs are rasterised, slightly thickened and outlined; no other changes.
+* Rebuild with `tools/build_font_atlas.py`.
+
 ## Lyrics - LRCLIB
 
 * **Where:** https://lrclib.net - a free, key-less, community-maintained database of synced lyrics

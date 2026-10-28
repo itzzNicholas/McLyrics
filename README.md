@@ -8,7 +8,7 @@ Client-side only. Works on vanilla and third-party servers (PVP included): the s
 ## What it does
 
 * Reads what you are playing on **Spotify** (Web API, OAuth PKCE) or **Apple Music / any player** (OS media session) and keeps in sync with pause / seek / track change.
-* Downloads time-synced lyrics at runtime and shows them as billboard text **behind your shoulders, above your head or in front of you**; the current word is highlighted, sung words fade, upcoming words are dimmed.
+* Downloads time-synced lyrics at runtime and shows them as text **in front of you, centre-low, with lines alternating left and right** (slightly tilted) in a bold hand-written rock font (Rock Salt); it sits *in* the world, so players, mobs and blocks closer than the text cover it. The current word is highlighted, sung words fade, upcoming words are dimmed. Older layouts (behind / above / in front of your body) and the game font are still selectable.
 * Spawns **emoji** from the meaning of the lyrics ("you broke my heart" → 💔, "non piango più" does *not* give 😭). ~560 rules per language (English + Italian), 26 categories, rules are plain JSON you can extend.
 * A **separate settings window** (Windows / macOS / Linux) opens with the game: connect players, live preview of lyrics, every option.
 
@@ -75,6 +75,10 @@ The **sync offset** slider compensates latency; small drift is smoothed, big jum
 * No custom packets, registries, entities or mixins. Lyrics and emoji are just text/quads drawn by the client; they have no hitbox and never touch gameplay.
 * Fabric: `"environment": "client"`. Forge 1.20.1: `displayTest="IGNORE_ALL_VERSION"` (client-only, ignored by the server mod-list check). Forge 1.12.2 / 1.8.9: `clientSideOnly = true`, `acceptableRemoteVersions = "*"`.
 * No telemetry. The only network calls are LRCLIB and Spotify (if you connect it), from your machine.
+
+## Shaders
+
+On 1.20.1 the lyrics and emoji are drawn through Minecraft's own text render pipeline (same shader, vertex format and full-bright lightmap as name tags), so shader packs such as Iris/Oculus process them like normal text. Fading while you move is **off** by default (it is an option in the window). On 1.12.2 / 1.8.9 drawing is fixed-function GL; OptiFine shaders usually handle that but this is untested.
 
 ## Privacy
 

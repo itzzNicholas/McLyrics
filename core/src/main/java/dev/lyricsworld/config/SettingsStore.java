@@ -55,7 +55,11 @@ public final class SettingsStore {
             if (Files.exists(file)) {
                 String text = new String(Files.readAllBytes(file), StandardCharsets.UTF_8);
                 Settings s = Json.COMPACT.fromJson(text, Settings.class);
-                if (s != null) return s.sanitize();
+                if (s != null) {
+                    // files written before the layout redesign have no layoutVersion: give them the new look once
+                    if (!Json.obj(text).has("layoutVersion")) s.migrateLayoutToDefaults();
+                    return s.sanitize();
+                }
             }
         } catch (IOException | RuntimeException e) {
             Log.warn("Settings unreadable, using defaults", e);

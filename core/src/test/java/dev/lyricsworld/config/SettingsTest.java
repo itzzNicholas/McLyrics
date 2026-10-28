@@ -26,7 +26,7 @@ public class SettingsTest {
         assertEquals(0.25f, s.scale, 0f);
         assertEquals(7, s.rows);
         assertEquals(100, s.emojiIntensity);
-        assertEquals("BEHIND", s.position);
+        assertEquals("VIEW", s.position);
         assertEquals("AUTO", s.source);
         assertTrue(s.opacity >= 0.05f);
     }
@@ -57,5 +57,34 @@ public class SettingsTest {
         assertFalse(st.updateFromJson("[[["));
         assertTrue(st.updateFromJson("{\"scale\":2.0}"));
         assertEquals(2f, st.get().scale, 0f);
+    }
+
+    @Test
+    public void oldLayoutFilesAreMigratedOnceToTheNewDefaults() throws Exception {
+        java.nio.file.Path f = tmp.newFolder().toPath().resolve("s.json");
+        Files.write(f, ("{\"position\":\"BEHIND\",\"height\":2.7,\"fadeWhenMoving\":true,"
+                + "\"seeThroughBlocks\":true,\"emojiIntensity\":33}").getBytes("UTF-8"));
+        SettingsStore st = new SettingsStore(f);
+        assertEquals("VIEW", st.get().position);
+        assertEquals("ROCK", st.get().fontMode);
+        assertFalse(st.get().fadeWhenMoving);
+        assertFalse(st.get().seeThroughBlocks);
+        assertEquals(-0.7f, st.get().height, 0.001f);
+        assertEquals("unrelated options are kept", 33, st.get().emojiIntensity);
+        // after migration the user's own choice sticks
+        Settings s = st.get();
+        s.position = "BEHIND";
+        st.update(s);
+        assertEquals("BEHIND", new SettingsStore(f).get().position);
+    }
+
+    @Test
+    public void defaultsAreTheNewLook() {
+        Settings s = new Settings().sanitize();
+        assertEquals("VIEW", s.position);
+        assertEquals("ROCK", s.fontMode);
+        assertFalse(s.fadeWhenMoving);
+        assertFalse(s.seeThroughBlocks);
+        assertTrue(s.outline);
     }
 }
