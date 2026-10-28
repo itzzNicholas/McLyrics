@@ -89,7 +89,17 @@ jobs:
       - name: Smoke-check the jar
         run: |
           jar=$(ls out/*.jar | head -1)
-          unzip -l "$jar" | grep -E 'dev/lyricsworld/LyricsWorld.class|assets/lyricsworld/emoji/rules_en.json|assets/lyricsworld/textures/emoji_atlas.png|LICENSE_LyricsWorld' 
+          unzip -l "$jar" | tail -n +1 | grep -v '\.class$' | head -60
+          unzip -l "$jar" | grep -c '\.class$' | sed 's/^/class files: /'
+          ls -la "$jar"
+          fail=0
+          for entry in dev/lyricsworld/LyricsWorld.class dev/lyricsworld/scene/SceneBuilder.class \
+                       assets/lyricsworld/emoji/rules_en.json assets/lyricsworld/emoji/rules_it.json \
+                       assets/lyricsworld/emoji/atlas.json assets/lyricsworld/textures/emoji_atlas.png \
+                       assets/lyricsworld/version.txt LICENSE_LyricsWorld; do
+            unzip -l "$jar" | grep -q " $entry\$" || { echo "MISSING in jar: $entry"; fail=1; }
+          done
+          exit $fail
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}
