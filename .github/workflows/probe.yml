@@ -1,0 +1,16 @@
+name: probe
+on:
+  push:
+    paths: ['.github/workflows/probe.yml']
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Forge maven listing
+        run: |
+          curl -sS https://maven.minecraftforge.net/net/minecraftforge/forge/1.12.2-14.23.5.2860/ | grep -o 'href="[^"]*"' | head -40
+          for c in userdev userdev3; do
+            echo -n "$c: "; curl -s -o /dev/null -w "%{http_code}\n" -I https://maven.minecraftforge.net/net/minecraftforge/forge/1.12.2-14.23.5.2860/forge-1.12.2-14.23.5.2860-$c.jar
+          done
+          echo "essential repo:"; curl -s -o /dev/null -w "%{http_code}\n" -I https://repo.essential.gg/repository/maven-public/net/minecraftforge/forge/1.12.2-14.23.5.2860/forge-1.12.2-14.23.5.2860-userdev.jar
+          curl -sS https://maven.minecraftforge.net/net/minecraftforge/forge/1.12.2-14.23.5.2847/ | grep -o 'href="[^"]*"' | head -20

@@ -8,6 +8,8 @@
 def lyricsVersion = (project.findProperty('modVersion') ?: '0.1.0').toString()
 version = lyricsVersion
 
+// make sure core's java plugin / tasks exist before we read them
+evaluationDependsOn(':core')
 def coreProject = project(':core')
 
 dependencies {
@@ -29,7 +31,11 @@ sourceSets.main.resources.srcDir(versionRes)
 tasks.named('processResources') { dependsOn 'genVersionRes' }
 
 tasks.named('jar') {
-    from(coreProject.sourceSets.main.output)
+    // classes + resources (emoji rules, atlas) of core, taken from core's own jar
+    dependsOn coreProject.tasks.named('jar')
+    from({ zipTree(coreProject.tasks.named('jar').get().archiveFile) }) {
+        exclude 'META-INF/**'
+    }
     from(rootProject.file('../../LICENSE')) { rename { 'LICENSE_LyricsWorld' } }
     from(rootProject.file('../../docs/THIRD_PARTY.md')) { rename { 'THIRD_PARTY_LyricsWorld.md' } }
     manifest {
