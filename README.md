@@ -17,7 +17,7 @@ Client-side only. Works on vanilla and third-party servers (PVP included): the s
 | Minecraft | Fabric | Forge | Java | Notes |
 |-----------|:------:|:-----:|:----:|-------|
 | 1.20.1    | ✅ (Fabric Loader + Fabric API) | ✅ (47.x) | 17 | Fabric & Forge share one renderer (Mojang mappings) |
-| 1.12.2    | ❌ not built | ✅ (14.23.5.2860) | 8 | see "Legacy Fabric" below |
+| 1.12.2    | ❌ not built | ✅ (14.23.5.2847) | 8 | see "Legacy Fabric" below |
 | 1.8.9     | ❌ not built | ✅ (11.15.1.2318) | 8 | Forge only |
 
 Jars are named `lyricsworld-<loader>-<mc>-<version>.jar` and are attached to each GitHub Release.

@@ -20,7 +20,7 @@ loom {
 dependencies {
     minecraft 'com.mojang:minecraft:1.12.2'
     mappings 'de.oceanlabs.mcp:mcp_stable:39-1.12'
-    forge 'net.minecraftforge:forge:1.12.2-14.23.5.2860:userdev3'
+    forge 'net.minecraftforge:forge:1.12.2-14.23.5.2847'
 }
 
 java {
