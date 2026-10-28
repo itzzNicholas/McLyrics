@@ -1,0 +1,7 @@
+// Root build: only the loader-independent `core` module lives here.
+// Each loader/version target under targets/ is an independent Gradle build
+// (different toolchains need different Gradle versions) - see build-all.sh.
+allprojects {
+    group = 'dev.lyricsworld'
+    version = project.findProperty('modVersion') ?: '0.1.0'
+}

@@ -1,0 +1,31 @@
+modLoader = "javafml"
+loaderVersion = "[47,)"
+license = "AGPL-3.0-or-later"
+issueTrackerURL = "https://github.com/itzznicholas/mclyrics/issues"
+
+[[mods]]
+modId = "lyricsworld"
+version = "${file.jarVersion}"
+displayName = "LyricsWorld"
+displayURL = "https://github.com/itzznicholas/mclyrics"
+authors = "itzznicholas"
+description = '''
+Shows the lyrics of the song you are playing, word by word, floating in the world, with context-aware emoji.
+Client-side only: safe to join vanilla and modded servers without it.
+'''
+# Client-only mod: do not take part in the server's mod-list/version check.
+displayTest = "IGNORE_ALL_VERSION"
+
+[[dependencies.lyricsworld]]
+modId = "forge"
+mandatory = true
+versionRange = "[47,)"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.lyricsworld]]
+modId = "minecraft"
+mandatory = true
+versionRange = "[1.20.1,1.21)"
+ordering = "NONE"
+side = "CLIENT"

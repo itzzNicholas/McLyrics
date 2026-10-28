@@ -1,0 +1,32 @@
+apply plugin: 'java'
+
+// Kept compatible with Gradle 7.6+ / 8.x so the legacy targets can include it too.
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Minecraft (every supported version) already ships Gson at runtime.
+    compileOnly 'com.google.code.gson:gson:2.10.1'
+    testImplementation 'com.google.code.gson:gson:2.10.1'
+    testImplementation 'junit:junit:4.13.2'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    // Java 8 API surface even when building on a newer JDK.
+    if (JavaVersion.current().isJava9Compatible()) {
+        options.release = 8
+    }
+}
+
+tasks.withType(Test).configureEach {
+    systemProperty 'file.encoding', 'UTF-8'
+}
+
+processResources {
+    inputs.property 'modVersion', project.version
+}

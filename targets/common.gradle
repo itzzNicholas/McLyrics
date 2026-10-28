@@ -1,0 +1,53 @@
+// Applied by every target build *after* its loader plugin. Shades the loader-independent `core`
+// module (code + emoji data + atlas) into the mod jar and stamps the version.
+//
+// Expects settings.gradle to have included core:
+//     include ':core'
+//     project(':core').projectDir = file('../../core')
+
+def lyricsVersion = (project.findProperty('modVersion') ?: '0.1.0').toString()
+version = lyricsVersion
+
+// make sure core's java plugin / tasks exist before we read them
+evaluationDependsOn(':core')
+def coreProject = project(':core')
+
+dependencies {
+    implementation coreProject
+}
+
+// assets/lyricsworld/version.txt is read by dev.lyricsworld.util.Version
+def versionRes = layout.buildDirectory.dir('generated/resources/version')
+tasks.register('genVersionRes') {
+    inputs.property('v', lyricsVersion)
+    outputs.dir(versionRes)
+    doLast {
+        def f = versionRes.get().file('assets/lyricsworld/version.txt').asFile
+        f.parentFile.mkdirs()
+        f.text = lyricsVersion
+    }
+}
+sourceSets.main.resources.srcDir(versionRes)
+tasks.named('processResources') { dependsOn 'genVersionRes' }
+
+tasks.named('jar') {
+    // classes + resources (emoji rules, atlas) of core, taken from core's own jar
+    dependsOn coreProject.tasks.named('jar')
+    from({ zipTree(coreProject.tasks.named('jar').get().archiveFile) }) {
+        exclude 'META-INF/**'
+    }
+    from(rootProject.file('../../LICENSE')) { rename { 'LICENSE_LyricsWorld' } }
+    from(rootProject.file('../../docs/THIRD_PARTY.md')) { rename { 'THIRD_PARTY_LyricsWorld.md' } }
+    manifest {
+        attributes(
+            'Implementation-Title': 'LyricsWorld',
+            'Implementation-Version': lyricsVersion,
+            'Specification-Title': 'LyricsWorld',
+            'Specification-Version': lyricsVersion
+        )
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
