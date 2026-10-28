@@ -16,6 +16,6 @@ public class LyricsWorldMod {
 
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
-        MinecraftForge.EVENT_BUS.register(new ClientHooks(Minecraft.getMinecraft().mcDataDir.toPath()));
+        MinecraftForge.EVENT_BUS.register(new ClientHooks(Minecraft.getMinecraft().gameDir.toPath()));
     }
 }
