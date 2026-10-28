@@ -267,6 +267,7 @@ public final class UiMain {
     private JLabel trackLabel = new JLabel("Nothing playing");
     private JLabel statusLabel = new JLabel(" ");
     private JLabel spotifyStatus = new JLabel(" ");
+    private JTextField loginLink = new JTextField(40);
     private JProgressBar progress = new JProgressBar(0, 1000);
     private JTextPane lyricsPane = new JTextPane();
     private JPanel categoryPanel = new JPanel();
@@ -409,6 +410,17 @@ public final class UiMain {
         }));
         f.add(null, row);
         f.add(null, spotifyStatus);
+        loginLink.setEditable(false);
+        loginLink.setToolTipText("If the browser does not open, copy this link into it");
+        f.add("Login link", loginLink);
+        JPanel linkRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        linkRow.add(button("Copy link", new Runnable() {
+            @Override public void run() { copyToClipboard(loginLink.getText()); }
+        }));
+        linkRow.add(button("Open link", new Runnable() {
+            @Override public void run() { if (!loginLink.getText().isEmpty()) openUrl(loginLink.getText()); }
+        }));
+        f.add(null, linkRow);
         return f.done();
     }
 
@@ -613,10 +625,14 @@ public final class UiMain {
                     SwingUtilities.invokeLater(new Runnable() {
                         @Override public void run() {
                             if (r.get("url") != null) {
-                                try {
-                                    Desktop.getDesktop().browse(new URI((String) r.get("url")));
-                                } catch (Exception e) {
-                                    JOptionPane.showMessageDialog(frame, "Open this link in your browser:\n" + r.get("url"));
+                                String url = (String) r.get("url");
+                                loginLink.setText(url);
+                                loginLink.setCaretPosition(0);
+                                copyToClipboard(url);
+                                if (!openUrl(url)) {
+                                    JOptionPane.showMessageDialog(frame, "I could not open your browser.\n"
+                                            + "The login link was copied to the clipboard (and is shown in the\n"
+                                            + "'Login link' box): paste it into your browser's address bar.");
                                 }
                             } else {
                                 JOptionPane.showMessageDialog(frame, String.valueOf(r.get("error")));
@@ -626,6 +642,45 @@ public final class UiMain {
                 } catch (Exception ignored) { }
             }
         });
+    }
+
+    private static void copyToClipboard(String text) {
+        try {
+            java.awt.Toolkit.getDefaultToolkit().getSystemClipboard()
+                    .setContents(new java.awt.datatransfer.StringSelection(text), null);
+        } catch (Throwable ignored) {
+            // clipboard may be unavailable; the link is still visible in the window
+        }
+    }
+
+    /** Tries java.awt.Desktop first, then the OS's own opener. @return false if nothing worked. */
+    private static boolean openUrl(String url) {
+        try {
+            if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+                Desktop.getDesktop().browse(new URI(url));
+                return true;
+            }
+        } catch (Throwable ignored) {
+            // fall through to the OS commands
+        }
+        String os = System.getProperty("os.name", "").toLowerCase();
+        String[][] attempts;
+        if (os.contains("win")) {
+            attempts = new String[][]{{"rundll32", "url.dll,FileProtocolHandler", url}, {"cmd", "/c", "start", "", url}};
+        } else if (os.contains("mac")) {
+            attempts = new String[][]{{"open", url}};
+        } else {
+            attempts = new String[][]{{"xdg-open", url}, {"gio", "open", url}, {"sensible-browser", url}};
+        }
+        for (String[] cmd : attempts) {
+            try {
+                new ProcessBuilder(cmd).start();
+                return true;
+            } catch (Throwable ignored) {
+                // try the next one
+            }
+        }
+        return false;
     }
 
     private void openFolder(String path) {
