@@ -109,6 +109,14 @@ Run core tests alone: `./gradlew :core:test`. Rebuild the emoji atlas after chan
 6. Close the window: game continues; press the *window* key: it comes back. Quit the game: the window disappears.
 7. Disconnect the network: game stays silent, window says why.
 
-## Status
+## Status (honest)
 
-See the release notes / CI badge for what is currently verified. Honest limits: the Windows SMTC helper, macOS AppleScript and Linux `playerctl` paths are covered by parsing unit tests but could only be exercised on real machines by you; in-game rendering of every loader target is verified to *compile* in CI but must be eyeballed in a real client.
+| What | State |
+|------|-------|
+| Core logic (media, lyrics, emoji, scene, window) | 77 unit tests, green locally and in CI; window checked under Xvfb |
+| Fabric 1.20.1, Forge 1.20.1, Forge 1.12.2, Forge 1.8.9 | **compile and package in CI**; jar contents verified (core classes, emoji rules, atlas, licence) |
+| In-game rendering on each version | **not yet seen in a real client** - needs a manual test (checklist above) |
+| Windows SMTC / macOS AppleScript / Linux playerctl readers | parsing is unit-tested; the live OS calls need a real machine |
+| Spotify login | PKCE logic and token storage unit-tested; the real login needs your Client ID |
+| `release.yml` | written but **never run** (GitHub only runs workflow_dispatch for files on `main`); first run happens after merging |
+| Legacy Fabric 1.12.2 / Fabric 1.8.9 | not provided (see above) |
