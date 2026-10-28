@@ -39,13 +39,8 @@ public final class UiLauncher {
 
     public synchronized void launchIfWanted() {
         if (!settings.get().showExternalWindow) return;
-        try {
-            if (java.awt.GraphicsEnvironment.isHeadless()) {
-                Log.info("No display available - external window not started (settings stay editable in settings.json)");
-                return;
-            }
-        } catch (Throwable t) { // java.desktop missing from a trimmed runtime
-            Log.info("No desktop support in this Java runtime - external window disabled");
+        if (!displayLikelyAvailable()) {
+            Log.info("No display available - external window not started (settings stay editable in settings.json)");
             return;
         }
         launch();
@@ -84,6 +79,18 @@ public final class UiLauncher {
             Log.warn("Could not start the external window", e);
         }
     }
+
+    /**
+     * Minecraft/Forge set {@code java.awt.headless=true} inside the game JVM, so that property says nothing
+     * about the window process (which is started with headless=false and checks for itself).
+     */
+    static boolean displayLikelyAvailable() {
+        String os = System.getProperty("os.name", "").toLowerCase();
+        if (os.contains("win") || os.contains("mac") || os.contains("darwin")) return true;
+        return notEmpty(System.getenv("DISPLAY")) || notEmpty(System.getenv("WAYLAND_DISPLAY"));
+    }
+
+    private static boolean notEmpty(String s) { return s != null && !s.isEmpty(); }
 
     public synchronized void stop() {
         if (process != null) process.destroy();
