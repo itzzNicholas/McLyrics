@@ -6,11 +6,10 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Forge maven listing
+      - name: Which 1.12.2 forge builds have a classic userdev jar
         run: |
-          curl -sS https://maven.minecraftforge.net/net/minecraftforge/forge/1.12.2-14.23.5.2860/ | grep -o 'href="[^"]*"' | head -40
-          for c in userdev userdev3; do
-            echo -n "$c: "; curl -s -o /dev/null -w "%{http_code}\n" -I https://maven.minecraftforge.net/net/minecraftforge/forge/1.12.2-14.23.5.2860/forge-1.12.2-14.23.5.2860-$c.jar
+          for v in 14.23.5.2768 14.23.5.2772 14.23.5.2775 14.23.5.2779 14.23.5.2781 14.23.5.2796 14.23.5.2800 14.23.5.2814 14.23.5.2820 14.23.5.2838 14.23.5.2847 14.23.5.2851 14.23.5.2854 14.23.5.2855 14.23.5.2857 14.23.5.2859; do
+            u=$(curl -s -o /dev/null -w "%{http_code}" -I https://maven.minecraftforge.net/net/minecraftforge/forge/1.12.2-$v/forge-1.12.2-$v-userdev.jar)
+            u3=$(curl -s -o /dev/null -w "%{http_code}" -I https://maven.minecraftforge.net/net/minecraftforge/forge/1.12.2-$v/forge-1.12.2-$v-userdev3.jar)
+            echo "$v userdev=$u userdev3=$u3"
           done
-          echo "essential repo:"; curl -s -o /dev/null -w "%{http_code}\n" -I https://repo.essential.gg/repository/maven-public/net/minecraftforge/forge/1.12.2-14.23.5.2860/forge-1.12.2-14.23.5.2860-userdev.jar
-          curl -sS https://maven.minecraftforge.net/net/minecraftforge/forge/1.12.2-14.23.5.2847/ | grep -o 'href="[^"]*"' | head -20
